@@ -24,6 +24,8 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count     = 1
 
   network_configuration {
+    security_groups  = [aws_security_group.allow_http.id]
+    assign_public_ip = true
     subnets = [var.subnet1_id, var.subnet2_id]
   }
 }
