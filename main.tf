@@ -63,10 +63,15 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count     = 1
 
   network_configuration {
-    security_groups  = [aws_security_group.allow_http.id]
-    assign_public_ip = true
-    # Hard coded subnet ids. Use 2 of the subnets already created
-    subnets = [var.subnet1_id, var.subnet2_id]
+    security_groups  = [aws_security_group.allow_http_in.id, aws_security_group.allow_all_out.id]
+    subnets          = [var.subnet1_id, var.subnet2_id] # Hard coded subnet ids. Use 2 of the subnets already created
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.lb_target_group.arn
+    container_name   = "rickroller"
+    container_port   = "80"
   }
 }
 
@@ -95,9 +100,9 @@ resource "aws_ecs_task_definition" "ecs_task" {
   DEFINITION
 }
 
-resource "aws_security_group" "allow_http" {
+resource "aws_security_group" "allow_http_in" {
   name        = "allow_http"
-  description = "Allow HTTP inbound and all outbound traffic"
+  description = "Allow HTTP inbound traffic"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -108,6 +113,12 @@ resource "aws_security_group" "allow_http" {
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
+}
+
+resource "aws_security_group" "allow_all_out" {
+  name        = "allow_all_out"
+  description = "All outbound traffic"
+  vpc_id      = var.vpc_id
 
   egress {
     description      = "ALL"
@@ -117,4 +128,44 @@ resource "aws_security_group" "allow_http" {
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
+}
+
+# Lets add a load balancer, its better design after all
+resource "aws_alb" "alb" {
+  name               = "rickroller-lb"
+  internal           = false
+  load_balancer_type = "application"
+
+  security_groups    = [aws_security_group.allow_http_in.id, aws_security_group.allow_all_out.id]
+  subnets            = [var.subnet1_id, var.subnet2_id] # Hard coded subnet ids. Use 2 of the subnets already created
+}
+
+resource "aws_lb_target_group" "lb_target_group" {
+  name        = "tg_rickroller"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = var.vpc_id
+
+  health_check {
+    enabled = true
+    path    = "/index.html"
+  }
+
+  depends_on = [aws_alb.alb]
+}
+
+resource "aws_alb_listener" "alb_listener" {
+  load_balancer_arn = aws_alb.alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.lb_target_group.arn
+  }
+}
+
+output "rickroller_url" {
+  value = "http://${aws_alb.alb.dns_name}"
 }
