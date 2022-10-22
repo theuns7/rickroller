@@ -65,7 +65,7 @@ resource "aws_ecs_service" "ecs_service" {
   network_configuration {
     security_groups  = [aws_security_group.allow_http_in.id, aws_security_group.allow_all_out.id]
     subnets          = [var.subnet1_id, var.subnet2_id] # Hard coded subnet ids. Use 2 of the subnets already created
-    assign_public_ip = true
+    assign_public_ip = true # Need this if we dont have a NAT gateway
   }
 
   load_balancer {
