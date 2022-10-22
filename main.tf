@@ -141,7 +141,7 @@ resource "aws_alb" "alb" {
 }
 
 resource "aws_lb_target_group" "lb_target_group" {
-  name        = "tg_rickroller"
+  name        = "tg-rickroller"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
