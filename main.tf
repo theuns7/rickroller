@@ -65,7 +65,7 @@ resource "aws_ecs_service" "ecs_service" {
   network_configuration {
     security_groups  = [aws_security_group.allow_http_in.id, aws_security_group.allow_all_out.id]
     subnets          = [var.subnet1_id, var.subnet2_id] # Hard coded subnet ids. Use 2 of the subnets already created
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {
@@ -101,7 +101,7 @@ resource "aws_ecs_task_definition" "ecs_task" {
 }
 
 resource "aws_security_group" "allow_http_in" {
-  name        = "allow_http"
+  name        = "allow_http_in"
   description = "Allow HTTP inbound traffic"
   vpc_id      = var.vpc_id
 
